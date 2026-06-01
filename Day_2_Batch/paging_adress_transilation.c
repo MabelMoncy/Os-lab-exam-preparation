@@ -4,11 +4,11 @@
 int main(int argument_count, char *argument_vector[])
 {
 
-    int total_virtual_memory_mb, single_page_size_kb;
+    int total_virtual_memory_in_mb, single_page_size_in_kb;
     unsigned int input_virtual_address;
 
-    unsigned int total_virtual_memory_bytes;
-    unsigned int single_page_size_bytes;
+    unsigned int total_virtual_memory_in_bytes;
+    unsigned int single_page_size_in_bytes;
     unsigned int total_pages_in_system;
 
     unsigned int calculated_page_number, calculated_offset;
