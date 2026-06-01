@@ -1,72 +1,80 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(int argc, char *argv[]) {
+int main(int argument_count, char *argument_vector[])
+{
 
-    int vspace_mb, page_kb;
-    unsigned int virtual_address;
+    int total_virtual_memory_mb, single_page_size_kb;
+    unsigned int input_virtual_address;
 
-    unsigned int virtual_space_bytes;
-    unsigned int page_size_bytes;
-    unsigned int num_pages;
+    unsigned int total_virtual_memory_bytes;
+    unsigned int single_page_size_bytes;
+    unsigned int total_pages_in_system;
 
-    unsigned int page_number, offset;
-    unsigned int *page_table;
+    unsigned int calculated_page_number, calculated_offset;
+    unsigned int *hardware_page_table;
 
-    // Check correct arguments
-    if (argc != 4) {
-        printf("Usage: %s <VirtualSpace_MB> <PageSize_KB> <VirtualAddress>\n", argv[0]);
+    // Check correct arguments (Program name + 3 inputs)
+    if (argument_count != 4)
+    {
+        printf("Usage: %s <VirtualSpace_MB> <PageSize_KB> <VirtualAddress>\n", argument_vector[0]);
         return 1;
     }
 
-    // Input from command line
-    vspace_mb = atoi(argv[1]);
-    page_kb = atoi(argv[2]);
-    virtual_address = atoi(argv[3]);
+    // Convert command-line text inputs to numbers
+    total_virtual_memory_mb = atoi(argument_vector[1]);
+    single_page_size_kb = atoi(argument_vector[2]);
+    input_virtual_address = atoi(argument_vector[3]);
 
-    // Convert to bytes
-    virtual_space_bytes = vspace_mb * 1024 * 1024;
-    page_size_bytes = page_kb * 1024;
+    // Convert megabytes and kilobytes completely to bytes
+    total_virtual_memory_bytes = total_virtual_memory_mb * 1024 * 1024;
+    single_page_size_bytes = single_page_size_kb * 1024;
 
-    // Validate virtual address
-    if (virtual_address >= virtual_space_bytes) {
+    // Boundary check: ensure target address falls inside allocated virtual memory
+    if (input_virtual_address >= total_virtual_memory_bytes)
+    {
         printf("Invalid Virtual Address\n");
         return 1;
     }
 
-    // Calculate number of pages
-    num_pages = virtual_space_bytes / page_size_bytes;
+    // Calculate total slots needed in the page table array
+    total_pages_in_system = total_virtual_memory_bytes / single_page_size_bytes;
 
-    // Allocate page table
-    page_table = (unsigned int *)malloc(num_pages * sizeof(unsigned int));
-    if (page_table == NULL) {
+    // Dynamically allocate memory for our page table array on the heap
+    hardware_page_table = (unsigned int *)malloc(total_pages_in_system * sizeof(unsigned int));
+    if (hardware_page_table == NULL)
+    {
         printf("Memory allocation failed\n");
         return 1;
     }
 
-    // Identity mapping: page i → frame i
-    for (unsigned int i = 0; i < num_pages; i++) {
-        page_table[i] = i;
+    // Identity mapping setup: map page index i directly to physical frame index i
+    for (unsigned int page_index = 0; page_index < total_pages_in_system; page_index++)
+    {
+        hardware_page_table[page_index] = page_index;
     }
 
-    // Compute page number and offset
-    page_number = virtual_address / page_size_bytes;
-    offset = virtual_address % page_size_bytes;
+    // Perform Address Translation math
+    calculated_page_number = input_virtual_address / single_page_size_bytes;
+    calculated_offset = input_virtual_address % single_page_size_bytes;
 
-    // Address translation
-    if (page_number >= num_pages) {
+    // Verify page number falls inside table boundaries and print output
+    if (calculated_page_number >= total_pages_in_system)
+    {
         printf("Page Table Miss!\n");
-    } else {
+    }
+    else
+    {
         printf("\n--- Address Translation ---\n");
-        printf("Virtual Address: %u\n", virtual_address);
-        printf("Page Number    : %u\n", page_number);
-        printf("Offset         : %u\n", offset);
+        printf("Virtual Address: %u\n", input_virtual_address);
+        printf("Page Number    : %u\n", calculated_page_number);
+        printf("Offset         : %u\n", calculated_offset);
         printf("Physical Addr  : <%u, %u>\n",
-               page_table[page_number], offset);
+               hardware_page_table[calculated_page_number], calculated_offset);
     }
 
-    // Free memory
-    free(page_table);
+    // Free dynamically allocated heap RAM to prevent memory leaks
+    free(hardware_page_table);
 
     return 0;
 }
