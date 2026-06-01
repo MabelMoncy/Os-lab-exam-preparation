@@ -1,62 +1,94 @@
 #include <stdio.h>
 
-struct Process
+struct ProcessControlBlock
 {
-    int id, at, bt, rt, ct, tat, wt;
+    int process_id;
+    int arrival_time;
+    int burst_time;
+    int remaining_time;
+    int completion_time;
+    int turnaround_time;
+    int waiting_time;
 };
 
 int main()
 {
-    int n, tq, time = 0, completed = 0;
-    float totalWT = 0;
+    int total_processes, time_quantum;
+    int current_time = 0, completed_processes_count = 0;
+    float total_waiting_time = 0;
 
     printf("Enter number of processes and Time Quantum: ");
-    scanf("%d %d", &n, &tq);
+    scanf("%d %d", &total_processes, &time_quantum);
 
-    struct Process p[n];
-    for (int i = 0; i < n; i++)
+    struct ProcessControlBlock process_list[total_processes];
+
+    // Step 1: Input process metrics
+    for (int i = 0; i < total_processes; i++)
     {
-        p[i].id = i + 1;
-        printf("Enter AT and BT for P%d: ", i + 1);
-        scanf("%d %d", &p[i].at, &p[i].bt);
-        p[i].rt = p[i].bt; // Remaining time initialization
+        process_list[i].process_id = i + 1;
+        printf("Enter Arrival Time and Burst Time for P%d: ", i + 1);
+        scanf("%d %d", &process_list[i].arrival_time, &process_list[i].burst_time);
+
+        // At start, remaining time is exactly equal to the total burst time
+        process_list[i].remaining_time = process_list[i].burst_time;
     }
 
-    // Main Simulation Loop
-    while (completed < n)
+    // Step 2: Main Scheduling Simulation Loop
+    while (completed_processes_count < total_processes)
     {
-        int idle = 1; // Flag to track if CPU did nothing this cycle
+        int cpu_was_idle_this_cycle = 1; // Flag to catch gaps where no process has arrived yet
 
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < total_processes; i++)
         {
-            // Process can run only if it has arrived and is not finished
-            if (p[i].at <= time && p[i].rt > 0)
+            // A process can execute only if it has arrived and still needs CPU time
+            if (process_list[i].arrival_time <= current_time && process_list[i].remaining_time > 0)
             {
-                idle = 0;
-                int exec = (p[i].rt < tq) ? p[i].rt : tq;
+                cpu_was_idle_this_cycle = 0; // CPU is actively processing data
 
-                time += exec;
-                p[i].rt -= exec;
+                // Determine execution slice: either the full time quantum or the leftover work time
+                int execution_slice = (process_list[i].remaining_time < time_quantum)
+                                          ? process_list[i].remaining_time
+                                          : time_quantum;
 
-                if (p[i].rt == 0)
-                { // Process completes
-                    p[i].ct = time;
-                    p[i].tat = p[i].ct - p[i].at;
-                    p[i].wt = p[i].tat - p[i].bt;
-                    totalWT += p[i].wt;
-                    completed++;
+                current_time += execution_slice;
+                process_list[i].remaining_time -= execution_slice;
+
+                // Check if the process finished its execution work load
+                if (process_list[i].remaining_time == 0)
+                {
+                    process_list[i].completion_time = current_time;
+
+                    // Direct math calculations derived from standard scheduling formulas
+                    process_list[i].turnaround_time = process_list[i].completion_time - process_list[i].arrival_time;
+                    process_list[i].waiting_time = process_list[i].turnaround_time - process_list[i].burst_time;
+
+                    total_waiting_time += process_list[i].waiting_time;
+                    completed_processes_count++;
                 }
             }
         }
-        if (idle)
-            time++; // If no process was ready, advance time (CPU idle)
+
+        // If the entire array loop ran and no ready process was found, advance the system clock
+        if (cpu_was_idle_this_cycle)
+        {
+            current_time++;
+        }
     }
 
-    // Output Display
+    // Step 3: Print Structured Output Table
     printf("\nPID\tAT\tBT\tCT\tTAT\tWT\n");
-    for (int i = 0; i < n; i++)
-        printf("P%d\t%d\t%d\t%d\t%d\t%d\n", p[i].id, p[i].at, p[i].bt, p[i].ct, p[i].tat, p[i].wt);
+    for (int i = 0; i < total_processes; i++)
+    {
+        printf("P%d\t%d\t%d\t%d\t%d\t%d\n",
+               process_list[i].process_id,
+               process_list[i].arrival_time,
+               process_list[i].burst_time,
+               process_list[i].completion_time,
+               process_list[i].turnaround_time,
+               process_list[i].waiting_time);
+    }
 
-    printf("\nAverage Waiting Time = %.2f\n", totalWT / n);
+    printf("\nAverage Waiting Time = %.2f\n", total_waiting_time / total_processes);
+
     return 0;
 }
